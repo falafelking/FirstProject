@@ -73,6 +73,8 @@ class Ball:
 		return self.vel.x
 	def vely(self):
 		return self.vel.y
+	def vel(self):
+		return self.vel
 	def posx(self):
 		return self.pos.x
 	def posy(self):
@@ -81,6 +83,8 @@ class Ball:
 		return self.accel.x
 	def accely(self):
 		return self.accel.y
+	def mass(self):
+		return self.mass
 		
 	def delvelx(self,velx):
 		if math.fabs(self.vel.x + velx) < velocitythresh:
@@ -150,6 +154,9 @@ class Ball:
 	def bounce(self):
 		self.vel.delx(-2.0*self.vel.x)
 		self.vel.dely(-2.0*self.vel.y)
+	def collide(self,collidermass,collidervel):
+		self.vel.x = 2*collidervel.x*collidermass/(collidermass+self.mass) + self.vel.x*(self.mass - collidermass)/(collidermass + self.mass)
+		self.vel.y = 2*collidervel.y*collidermass/(collidermass+self.mass) + self.vel.y*(self.mass - collidermass)/(collidermass + self.mass)
 		
 class Vector:
 	def __init__(self,x,y):
@@ -186,6 +193,8 @@ class Enemy:
 		return self.accel
 	def getcolor(self):
 		return self.color
+	def mass(self):
+		return self.mass
 	def bounce(self):
 		self.vel.delx(-2.0*self.vel.x)
 		self.vel.dely(-2.0*self.vel.y)
@@ -209,6 +218,9 @@ class Enemy:
 	def bounce(self):
 		self.vel.delx(-2.0*self.vel.x)
 		self.vel.dely(-2.0*self.vel.y)
+	def collide(self,collidermass,collidervel):
+		self.vel.x = 2*collidervel.x*collidermass/(collidermass+self.mass) + self.vel.x*(self.mass - collidermass)/(collidermass + self.mass)
+		self.vel.y = 2*collidervel.y*collidermass/(collidermass+self.mass) + self.vel.y*(self.mass - collidermass)/(collidermass + self.mass)
 		
 		
 class Game:
@@ -279,6 +291,7 @@ class Game:
 			anotherindex = 0
 			if index > 0:
 				while not done: 
+					done = True
 					rectone = pygame.Rect(enemyposvect.x,enemyposvect.y,enemyrad,enemyrad)
 					indextwo = 0
 					for anotherindex in range(0,index - 1):
@@ -286,14 +299,14 @@ class Game:
 						if rectone.colliderect(recttwo):
 							enemyposvect = Vector((width - enemyrad)*random.random(),menulength + (length-menulength-enemyrad)*random.random())
 							rectone = pygame.Rect(enemyposvect.x,enemyposvect.y,enemyrad,enemyrad)
+							done = False
 						else:
 							indextwo = indextwo + 1
 						anotherindex = anotherindex + 1
 					recttwo = pygame.Rect(ball.posx(),ball.posy(),playerrad,playerrad)
 					if recttwo.colliderect(rectone):
-						indextwo = indextwo - 1
-					if indextwo == index - 1:
-						done = True
+						rectone = pygame.Rect(enemyposvect.x,enemyposvect.y,enemyrad,enemyrad)
+						done = False
 				done = False
 			enemies.append(Enemy(Vector((width - enemyrad)*random.random(),menulength + (length-menulength-enemyrad)*random.random()),Vector(speed*random.random(),speed*random.random()),Vector(0,0),RandomColor(random.random()),enemymass))
 			index = index + 1
@@ -347,7 +360,7 @@ class Game:
 						elif pos[0] < sliders[sliderindex].getpos().x + sliderspace:
 							sliders[sliderindex].changepos(0.0)
 						else:
-							sliders[sliderindex].changepos(pos[0] - sliders[sliderindex].getpos().x + sliderspace)
+							sliders[sliderindex].changepos(pos[0] - sliderbarwidth/2 - sliders[sliderindex].getpos().x + sliderspace)
 						sliderindex = -1
 			
 			keys = pygame.key.get_pressed()  #checking pressed keys
@@ -380,13 +393,17 @@ class Game:
 					andotherindex = 0
 					recttwo = pygame.Rect(ball.posx(),ball.posy(),playerrad,playerrad)
 					if rectone.colliderect(recttwo):
-						enemies[index].bounce()
-						ball.bounce()
+						temp = enemies[index].getvel()
+						temp = Vector(temp.x,temp.y)
+						enemies[index].collide(ball.mass,ball.vel)
+						ball.collide(enemies[index].mass,temp)
 					for anotherindex in range(index + 1,numberenemies):
 						recttwo = pygame.Rect(enemies[anotherindex].getpos().x,enemies[anotherindex].getpos().y,enemyrad,enemyrad)
 						if rectone.colliderect(recttwo):
-							enemies[index].bounce()
-							enemies[anotherindex].bounce()
+							temp = enemies[index].getvel()
+							temp = Vector(temp.x,temp.y)
+							enemies[index].collide(enemies[anotherindex].mass,enemies[anotherindex].getvel())
+							enemies[anotherindex].collide(enemies[index].mass,temp)
 						anotherindex = anotherindex + 1
 					index = index + 1
 				timeindextwo = timeindextwo + 1
